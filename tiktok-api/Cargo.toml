@@ -1,0 +1,15 @@
+[package]
+name = "tiktok-api"
+version = "0.0.0"
+authors = ["vkill <vkill.net@gmail.com>"]
+edition = "2021"
+description = "TikTok API"
+license = "Apache-2.0 OR MIT"
+repository = "https://github.com/bk-rs/tiktok-rs"
+homepage = "https://github.com/bk-rs/tiktok-rs"
+documentation = "https://docs.rs/tiktok-api"
+keywords = []
+categories = []
+readme = "README.md"
+
+[dependencies]
