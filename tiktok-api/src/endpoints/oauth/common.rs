@@ -44,19 +44,53 @@ where
     T: core::fmt::Debug + Clone + DeserializeOwned,
 {
     let status = response.status();
+    #[allow(clippy::single_match)]
     match status {
         StatusCode::OK => {
-            let ok_json = serde_json::from_slice::<T>(response.body())
-                .map_err(EndpointError::DeResponseBodyFailed)?;
+            use crate::objects::oauth::Message;
 
-            Ok(EndpointRet::Ok(ok_json))
+            #[allow(clippy::single_match)]
+            match serde_json::from_slice::<Message>(response.body()) {
+                Ok(Message::Success) => {
+                    let ok_json = serde_json::from_slice::<T>(response.body())
+                        .map_err(EndpointError::DeResponseBodyFailed)?;
+
+                    return Ok(EndpointRet::Ok(ok_json));
+                }
+                _ => {}
+            }
         }
-        status => match serde_json::from_slice::<ResponseErrorBody>(response.body()) {
-            Ok(err_json) => Ok(EndpointRet::Other((status, Ok(err_json)))),
-            Err(_) => Ok(EndpointRet::Other((
-                status,
-                Err(response.body().to_owned()),
-            ))),
-        },
+        _ => {}
+    }
+
+    match serde_json::from_slice::<ResponseErrorBody>(response.body()) {
+        Ok(err_json) => Ok(EndpointRet::Other((status, Ok(err_json)))),
+        Err(_) => Ok(EndpointRet::Other((
+            status,
+            Err(response.body().to_owned()),
+        ))),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_endpoint_parse_response() -> Result<(), Box<dyn std::error::Error>> {
+        let resp_body = include_str!("../../../tests/response_body_files/oauth/refresh_token__err_with_expired_refresh_token.json");
+        let resp = Response::builder()
+            .status(StatusCode::OK)
+            .body(resp_body.as_bytes().to_vec())?;
+
+        match endpoint_parse_response::<()>(resp) {
+            Ok(EndpointRet::Other((status_code, Ok(err_body)))) => {
+                assert_eq!(status_code, StatusCode::OK);
+                assert_eq!(err_body.data.error_code, 10010);
+            }
+            x => panic!("{x:?}"),
+        }
+
+        Ok(())
     }
 }

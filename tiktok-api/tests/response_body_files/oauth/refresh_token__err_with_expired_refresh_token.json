@@ -1,0 +1,9 @@
+{
+    "data": {
+        "captcha": "",
+        "desc_url": "",
+        "description": "RefreshToken Invalid or expired",
+        "error_code": 10010
+    },
+    "message": "error"
+}

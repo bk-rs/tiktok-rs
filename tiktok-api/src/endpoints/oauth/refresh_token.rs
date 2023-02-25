@@ -58,7 +58,6 @@ impl Endpoint for RefreshTokenEndpoint {
         &self,
         response: Response<Body>,
     ) -> Result<Self::ParseResponseOutput, Self::ParseResponseError> {
-        println!("{:?}", String::from_utf8_lossy(response.body()));
         endpoint_parse_response(response)
     }
 }
