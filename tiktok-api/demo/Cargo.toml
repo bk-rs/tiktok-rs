@@ -1,0 +1,20 @@
+[package]
+name = "tiktok-api-demo"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "tiktok_api_demo_refresh_token"
+path = "src/refresh_token.rs"
+
+[[bin]]
+name = "tiktok_api_demo_v2_user_info"
+path = "src/v2_user_info.rs"
+
+[dependencies]
+tiktok-api = { path = ".." }
+
+http-api-isahc-client = { version = "0.2" }
+
+futures-lite = { version = "1" }
+env_logger = { version = "0.10" }

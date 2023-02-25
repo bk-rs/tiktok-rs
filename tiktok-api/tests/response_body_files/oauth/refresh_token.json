@@ -1,0 +1,16 @@
+{
+    "data": {
+        "access_token": "act.2f000258d259e34d6d5173f6a74b3f70TlPggC8F2TmM2EkvA6YeVfNmurmu!4608",
+        "captcha": "",
+        "desc_url": "",
+        "description": "",
+        "error_code": 0,
+        "expires_in": 86400,
+        "log_id": "2023022106494312B9467B6F7851BA673D",
+        "open_id": "_000fwZ23Mw4RY9cB4lDQyKCgQg4Ft6SyTuE",
+        "refresh_expires_in": 31522158,
+        "refresh_token": "rft.9f6d0b36781ba59c7592caaf68772020SV5NI7wUFgki06zaeZVfdvVjlhPN!4595",
+        "scope": "user.info.basic,video.list,video.upload"
+    },
+    "message": "success"
+}
