@@ -12,15 +12,31 @@ keywords = []
 categories = []
 readme = "README.md"
 
+[package.metadata.docs.rs]
+all-features = true
+
+[features]
+default = []
+with_video_upload = ["reqwest"]
+with_tokio = ["tokio", "tokio-util"]
+with_tokio_fs = ["with_tokio", "tokio/fs"]
+
 [dependencies]
 http-api-client-endpoint = { version = "0.2", default-features = false }
 
 serde = { version = "1", default-features = false, features = ["derive"] }
 serde_json = { version = "1", default-features = false, features = ["std"] }
 serde-enum-str = { version = "0.3", default-features = false }
-chrono = { version = "0.4", default-features = false, features = ["serde"] }
+chrono = { version = "0.4", default-features = false, features = ["serde", "clock"] }
 url = { version = "2", default-features = false }
+
+reqwest = { version = "0.11", default-features = false, features = ["default-tls", "stream", "multipart"], optional = true }
+
+tokio = { version = "1", default-features = false, optional = true }
+tokio-util = { version = "0.7", default-features = false, optional = true }
 
 [dev-dependencies]
 serde_json = { version = "1" }
 
+[package.metadata.cargo-all-features]
+skip_optional_dependencies = true

@@ -8,13 +8,19 @@ name = "tiktok_api_demo_refresh_token"
 path = "src/refresh_token.rs"
 
 [[bin]]
+name = "tiktok_api_demo_video_upload"
+path = "src/video_upload.rs"
+
+[[bin]]
 name = "tiktok_api_demo_v2_user_info"
 path = "src/v2_user_info.rs"
 
 [dependencies]
-tiktok-api = { path = ".." }
+tiktok-api = { path = "..", features = ["with_video_upload", "with_tokio_fs"] }
 
 http-api-isahc-client = { version = "0.2" }
+reqwest = { version = "0.11" }
 
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 futures-lite = { version = "1" }
 env_logger = { version = "0.10" }

@@ -1,0 +1,11 @@
+{
+    "data": {
+        "err_code": 10002,
+        "error_code": 10002,
+        "error_msg": "Invalid request parameters."
+    },
+    "extra": {
+        "error_detail": "expecting a binary field `video` in the form-data",
+        "logid": "202302270251289DBAA469B9779C73BB2E"
+    }
+}

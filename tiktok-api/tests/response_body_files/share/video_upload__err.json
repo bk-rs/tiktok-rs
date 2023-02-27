@@ -1,0 +1,11 @@
+{
+    "data": {
+        "err_code": 20000,
+        "error_code": 20000,
+        "error_msg": "The access token is invalid or not found in the request."
+    },
+    "extra": {
+        "error_detail": "access_token not found in the request query param",
+        "logid": "20230227020936C1D05270AC18A066168B"
+    }
+}
