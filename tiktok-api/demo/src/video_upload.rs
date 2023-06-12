@@ -6,8 +6,12 @@ RUST_BACKTRACE=1 RUST_LOG=trace cargo run -p tiktok-api-demo --bin tiktok_api_de
 use std::env;
 
 use http_api_isahc_client::{Client as _, IsahcClient};
-use tiktok_api::endpoints::v2::{
-    video_upload_init::VideoUploadInitRequestBodySourceInfo, EndpointRet, VideoUploadInitEndpoint,
+use tiktok_api::{
+    endpoints::v2::{
+        video_upload_init::VideoUploadInitRequestBodySourceInfo, EndpointRet,
+        VideoUploadInitEndpoint,
+    },
+    media_transfer::upload_from_file,
 };
 
 #[tokio::main]
@@ -26,11 +30,11 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
 
     //
     if path_or_url.starts_with("http://") || path_or_url.starts_with("https://") {
+        let video_url = path_or_url.parse()?;
+
         let video_upload_init = VideoUploadInitEndpoint::new(
             &access_token,
-            VideoUploadInitRequestBodySourceInfo::PullFromUrl {
-                video_url: path_or_url.parse()?,
-            },
+            VideoUploadInitRequestBodySourceInfo::PullFromUrl { video_url },
         );
         let ret = client.respond_endpoint(&video_upload_init).await?;
         match &ret {
@@ -42,10 +46,11 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
     } else {
-        let video_upload_init =
-            VideoUploadInitEndpoint::with_file(&access_token, &path_or_url.parse()?).await?;
+        let path = path_or_url.parse()?;
+
+        let video_upload_init = VideoUploadInitEndpoint::with_file(&access_token, &path).await?;
         let ret = client.respond_endpoint(&video_upload_init).await?;
-        let _upload_url = match &ret {
+        let upload_url = match &ret {
             EndpointRet::Ok(ok_json) => {
                 println!("{ok_json:?}");
                 ok_json
@@ -58,6 +63,10 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
                 panic!("{ret:?}");
             }
         };
+
+        let client = reqwest::Client::new();
+
+        upload_from_file(client, upload_url, "video/mp4", &path).await?;
     }
 
     Ok(())
