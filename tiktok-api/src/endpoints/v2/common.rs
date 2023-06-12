@@ -26,8 +26,11 @@ where
 #[derive(Debug)]
 pub enum EndpointError {
     MakeRequestUrlFailed(UrlParseError),
+    SerRequestBodyFailed(SerdeJsonError),
     MakeRequestFailed(HttpError),
     DeResponseBodyFailed(SerdeJsonError),
+    #[cfg(feature = "with_tokio_fs")]
+    GetFileInfoFailed(std::io::Error),
 }
 impl core::fmt::Display for EndpointError {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
