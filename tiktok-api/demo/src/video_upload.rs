@@ -25,6 +25,7 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
     let path_or_url = env::args()
         .nth(2)
         .ok_or_else(|| "arg path_or_url missing".to_string())?;
+    let chunk_size = env::args().nth(3).and_then(|x| x.parse::<usize>().ok());
 
     let client = IsahcClient::new()?;
 
@@ -48,7 +49,8 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
     } else {
         let path = path_or_url.parse()?;
 
-        let video_upload_init = VideoUploadInitEndpoint::with_file(&access_token, &path).await?;
+        let video_upload_init =
+            VideoUploadInitEndpoint::with_file(&access_token, &path, chunk_size).await?;
         let ret = client.respond_endpoint(&video_upload_init).await?;
         let upload_url = match &ret {
             EndpointRet::Ok(ok_json) => {
@@ -66,7 +68,14 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
 
         let client = reqwest::Client::new();
 
-        upload_from_file(client, upload_url, "video/mp4", &path).await?;
+        match upload_from_file(client, upload_url, "video/mp4", &path, chunk_size).await {
+            Ok(ret_list) => {
+                println!("{ret_list:?}");
+            }
+            Err(err) => {
+                panic!("{err:?}");
+            }
+        }
     }
 
     Ok(())

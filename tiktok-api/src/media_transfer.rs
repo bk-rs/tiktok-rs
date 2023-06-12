@@ -8,13 +8,22 @@ pub const CHUNK_COUNT_MIN: usize = 1;
 pub const CHUNK_COUNT_MAX: usize = 1000;
 
 //
-pub fn get_chunk_size_and_total_chunk_count(file_size: u64) -> (u64, u64) {
-    if file_size <= CHUNK_SIZE_MAX as u64 {
-        (file_size, 1)
+fn get_chunk_size(chunk_size: usize) -> usize {
+    core::cmp::min(core::cmp::max(chunk_size, CHUNK_SIZE_MIN), CHUNK_SIZE_MAX)
+}
+
+pub fn get_chunk_size_and_total_chunk_count(
+    video_size: usize,
+    chunk_size: usize,
+) -> (usize, usize) {
+    let chunk_size = get_chunk_size(chunk_size);
+
+    if video_size <= chunk_size {
+        (video_size, 1)
     } else {
         (
-            CHUNK_SIZE_MAX as u64,
-            (file_size as f64 / CHUNK_SIZE_MAX as f64).ceil() as u64,
+            chunk_size,
+            (video_size as f64 / chunk_size as f64).floor() as usize,
         )
     }
 }
@@ -27,8 +36,9 @@ pub async fn upload_part<T>(
     upload_url: Url,
     content_type: &str,
     byte_range: core::ops::Range<usize>,
+    video_size: usize,
     stream: T,
-) -> Result<(), UploadError>
+) -> Result<StatusCode, UploadError>
 where
     T: Into<Body>,
 {
@@ -37,8 +47,10 @@ where
         "bytes {}-{}/{}",
         byte_range.start,
         byte_range.end - 1,
-        byte_range.end - byte_range.start
+        video_size,
     );
+
+    // println!("content_length:{content_length} content_range:{content_range}");
 
     //
     let response = client
@@ -55,7 +67,7 @@ where
     let response_status = response.status();
 
     match response_status {
-        StatusCode::PARTIAL_CONTENT | StatusCode::CREATED => Ok(()),
+        StatusCode::PARTIAL_CONTENT | StatusCode::CREATED => Ok(response_status),
         status => {
             let response_body = response
                 .bytes()
@@ -77,8 +89,9 @@ pub async fn upload_part_from_reader_stream<S>(
     upload_url: Url,
     content_type: &str,
     byte_range: core::ops::Range<usize>,
+    video_size: usize,
     stream: S,
-) -> Result<(), UploadError>
+) -> Result<StatusCode, UploadError>
 where
     S: tokio::io::AsyncRead + Send + Sync + 'static,
 {
@@ -89,6 +102,7 @@ where
         upload_url,
         content_type,
         byte_range,
+        video_size,
         Body::wrap_stream(ReaderStream::new(stream)),
     )
     .await
@@ -101,7 +115,8 @@ pub async fn upload_part_from_file(
     content_type: &str,
     file_path: &std::path::PathBuf,
     file_index: core::ops::Range<usize>,
-) -> Result<(), UploadError> {
+    file_size: usize,
+) -> Result<StatusCode, UploadError> {
     use tokio::{
         fs::File,
         io::{AsyncReadExt as _, AsyncSeekExt as _, SeekFrom},
@@ -125,6 +140,7 @@ pub async fn upload_part_from_file(
         upload_url,
         content_type,
         file_index,
+        file_size,
         file,
     )
     .await
@@ -136,7 +152,8 @@ pub async fn upload_from_file(
     upload_url: Url,
     content_type: &str,
     file_path: &std::path::PathBuf,
-) -> Result<(), UploadError> {
+    chunk_size: Option<usize>,
+) -> Result<Vec<Result<StatusCode, UploadError>>, UploadError> {
     let crate::tokio_fs_util::Info {
         file_size,
         file_name: _,
@@ -144,27 +161,48 @@ pub async fn upload_from_file(
         .await
         .map_err(UploadError::GetFileInfoFailed)?;
 
+    let video_size = file_size as usize;
+    let (chunk_size, total_chunk_count) =
+        get_chunk_size_and_total_chunk_count(video_size, chunk_size.unwrap_or(CHUNK_SIZE_MAX));
+
+    if total_chunk_count > CHUNK_COUNT_MAX {
+        return Err(UploadError::ChunkSizeTooSmaillOrFileTooLarge);
+    }
+
+    let mut ret_list = vec![];
     for chunk_count in CHUNK_COUNT_MIN..=CHUNK_COUNT_MAX {
         let chunk_index = chunk_count - 1;
 
-        let file_index_start = chunk_index * CHUNK_SIZE_MAX;
-        let file_index_end = core::cmp::min(file_index_start + CHUNK_SIZE_MAX, file_size as usize);
+        let file_index_start = chunk_index * chunk_size;
+        let file_index_end = if total_chunk_count == chunk_count {
+            video_size
+        } else {
+            file_index_start + chunk_size
+        };
 
-        upload_part_from_file(
+        match upload_part_from_file(
             client.to_owned(),
             upload_url.to_owned(),
             content_type,
             file_path,
             file_index_start..file_index_end,
+            file_size as usize,
         )
-        .await?;
+        .await
+        {
+            Ok(x) => ret_list.push(Ok(x)),
+            Err(err) => {
+                ret_list.push(Err(err));
+                break;
+            }
+        }
 
-        if file_index_start + CHUNK_SIZE_MAX > file_size as usize {
+        if file_index_end >= video_size {
             break;
         }
     }
 
-    Ok(())
+    Ok(ret_list)
 }
 
 //
@@ -179,6 +217,7 @@ pub enum UploadError {
     GetFileInfoFailed(std::io::Error),
     #[cfg(feature = "with_tokio_fs")]
     OpenFileFailed(std::io::Error),
+    ChunkSizeTooSmaillOrFileTooLarge,
 }
 impl core::fmt::Display for UploadError {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {

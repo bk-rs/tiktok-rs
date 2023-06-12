@@ -6,6 +6,7 @@ use crate::objects::v2::Error;
 //
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct ResponseErrorBody {
+    #[serde(default)]
     pub data: Map<String, Value>,
     pub error: Error,
 }
@@ -23,6 +24,15 @@ mod tests {
         )) {
             Ok(err_json) => {
                 assert_eq!(err_json.error.code, ErrorCode::AccessTokenInvalid);
+            }
+            x => panic!("{x:?}"),
+        }
+
+        match serde_json::from_str::<ResponseErrorBody>(include_str!(
+            "../../../tests/response_body_files/v2/video_upload_init__err__spam_risk_too_many_pending_share.json"
+        )) {
+            Ok(err_json) => {
+                assert_eq!(err_json.error.code, ErrorCode::Other("spam_risk_too_many_pending_share".into()));
             }
             x => panic!("{x:?}"),
         }

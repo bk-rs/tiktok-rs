@@ -9,7 +9,10 @@ use serde::{Deserialize, Serialize};
 use url::Url;
 
 use super::common::{endpoint_parse_response, EndpointError, EndpointRet};
-use crate::{media_transfer::get_chunk_size_and_total_chunk_count, objects::v2::Error};
+use crate::{
+    media_transfer::{get_chunk_size_and_total_chunk_count, CHUNK_SIZE_MAX},
+    objects::v2::Error,
+};
 
 //
 pub const URL: &str = "https://open.tiktokapis.com/v2/post/publish/inbox/video/init/";
@@ -35,6 +38,7 @@ impl VideoUploadInitEndpoint {
     pub async fn with_file(
         access_token: impl AsRef<str>,
         file_path: &std::path::PathBuf,
+        chunk_size: Option<usize>,
     ) -> Result<Self, EndpointError> {
         let crate::tokio_fs_util::Info {
             file_size,
@@ -43,10 +47,12 @@ impl VideoUploadInitEndpoint {
             .await
             .map_err(EndpointError::GetFileInfoFailed)?;
 
-        let (chunk_size, total_chunk_count) = get_chunk_size_and_total_chunk_count(file_size);
+        let video_size = file_size as usize;
+        let (chunk_size, total_chunk_count) =
+            get_chunk_size_and_total_chunk_count(video_size, chunk_size.unwrap_or(CHUNK_SIZE_MAX));
 
         let source_info = VideoUploadInitRequestBodySourceInfo::FileUpload {
-            video_size: file_size,
+            video_size,
             chunk_size,
             total_chunk_count,
         };
@@ -102,9 +108,9 @@ pub struct VideoUploadInitRequestBody {
 pub enum VideoUploadInitRequestBodySourceInfo {
     #[serde(rename = "FILE_UPLOAD")]
     FileUpload {
-        video_size: u64,
-        chunk_size: u64,
-        total_chunk_count: u64,
+        video_size: usize,
+        chunk_size: usize,
+        total_chunk_count: usize,
     },
     #[serde(rename = "PULL_FROM_URL")]
     PullFromUrl { video_url: Url },

@@ -17,7 +17,7 @@ where
     T: core::fmt::Debug + Clone,
 {
     Ok(T),
-    Other((StatusCode, Result<ResponseErrorBody, Body>)),
+    Other((StatusCode, Result<ResponseErrorBody, Result<String, Body>>)),
 }
 
 //
@@ -58,7 +58,8 @@ where
             Ok(err_json) => Ok(EndpointRet::Other((status, Ok(err_json)))),
             Err(_) => Ok(EndpointRet::Other((
                 status,
-                Err(response.body().to_owned()),
+                Err(String::from_utf8(response.body().to_owned())
+                    .map_err(|_| response.body().to_owned())),
             ))),
         },
     }
