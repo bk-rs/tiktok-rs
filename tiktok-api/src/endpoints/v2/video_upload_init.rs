@@ -9,10 +9,7 @@ use serde::{Deserialize, Serialize};
 use url::Url;
 
 use super::common::{endpoint_parse_response, EndpointError, EndpointRet};
-use crate::{
-    media_transfer::{get_chunk_size_and_total_chunk_count, CHUNK_SIZE_MAX},
-    objects::v2::Error,
-};
+use crate::objects::v2::Error;
 
 //
 pub const URL: &str = "https://open.tiktokapis.com/v2/post/publish/inbox/video/init/";
@@ -40,6 +37,8 @@ impl VideoUploadInitEndpoint {
         file_path: &std::path::PathBuf,
         chunk_size: Option<usize>,
     ) -> Result<Self, EndpointError> {
+        use crate::media_transfer::{get_chunk_size_and_total_chunk_count, CHUNK_SIZE_MAX};
+
         let crate::tokio_fs_util::Info {
             file_size,
             file_name: _,
@@ -51,6 +50,7 @@ impl VideoUploadInitEndpoint {
         let (chunk_size, total_chunk_count) =
             get_chunk_size_and_total_chunk_count(video_size, chunk_size.unwrap_or(CHUNK_SIZE_MAX));
 
+        //
         let source_info = VideoUploadInitRequestBodySourceInfo::FileUpload {
             video_size,
             chunk_size,
@@ -149,7 +149,7 @@ mod tests {
         assert_eq!(req.method(), Method::POST);
         assert_eq!(req.uri(), URL);
         assert_eq!(
-            serde_json::from_slice::<serde_json::Value>(&req.body()).unwrap(),
+            serde_json::from_slice::<serde_json::Value>(req.body()).unwrap(),
             serde_json::json!({
                 "source_info": {
                     "source": "FILE_UPLOAD",
@@ -173,7 +173,7 @@ mod tests {
         assert_eq!(req.method(), Method::POST);
         assert_eq!(req.uri(), URL);
         assert_eq!(
-            serde_json::from_slice::<serde_json::Value>(&req.body()).unwrap(),
+            serde_json::from_slice::<serde_json::Value>(req.body()).unwrap(),
             serde_json::json!({
                 "source_info": {
                     "source": "PULL_FROM_URL",
